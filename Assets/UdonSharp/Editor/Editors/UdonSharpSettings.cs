@@ -29,7 +29,7 @@ public class <TemplateClassName> : UdonSharpBehaviour
 {
     void Start()
     {
-        
+
     }
 }
 ";
@@ -77,7 +77,7 @@ public class <TemplateClassName> : UdonSharpBehaviour
         public static UdonSharpSettings GetSettings()
         {
             UdonSharpSettings settings = AssetDatabase.LoadAssetAtPath<UdonSharpSettings>(SettingsSavePath);
-            
+
             return settings;
         }
 
@@ -87,6 +87,11 @@ public class <TemplateClassName> : UdonSharpBehaviour
             if (settings == null)
             {
                 settings = ScriptableObject.CreateInstance<UdonSharpSettings>();
+
+                if (!Directory.Exists(Path.GetDirectoryName(SettingsSavePath))) {
+                    Directory.CreateDirectory(Path.GetDirectoryName(SettingsSavePath));
+                }
+
                 AssetDatabase.CreateAsset(settings, SettingsSavePath);
                 AssetDatabase.SaveAssets();
             }
@@ -115,7 +120,7 @@ public class <TemplateClassName> : UdonSharpBehaviour
                         .Replace("+", "");
         }
 
-        // Unity does not like having scripts with different names from their classes and will start breaking things weirdly, so enforce it by default. 
+        // Unity does not like having scripts with different names from their classes and will start breaking things weirdly, so enforce it by default.
         // If people really want to rename the asset afterwards they can, but there will be a compile warning that they can't get rid of without fixing the names.
         internal static string SanitizeScriptFilePath(string file)
         {
@@ -154,7 +159,7 @@ public class <TemplateClassName> : UdonSharpBehaviour
             return BuiltinScanningBlacklist;
         }
     }
-    
+
     public class UdonSharpSettingsProvider
     {
         private static readonly GUIContent autoCompileLabel = new GUIContent("Auto compile on modify", "Trigger a compile whenever a U# source file is modified.");
@@ -224,7 +229,7 @@ public class <TemplateClassName> : UdonSharpBehaviour
 
                     EditorGUI.BeginChangeCheck();
                     EditorGUILayout.PropertyField(settingsObject.FindProperty(nameof(UdonSharpSettings.autoCompileOnModify)), autoCompileLabel);
-                    
+
                     if (settings.autoCompileOnModify)
                     {
                         EditorGUILayout.PropertyField(settingsObject.FindProperty(nameof(UdonSharpSettings.compileAllScripts)), compileAllLabel);
@@ -238,7 +243,7 @@ public class <TemplateClassName> : UdonSharpBehaviour
 
                     if (settings.disableUploadCompile)
                     {
-                        EditorGUILayout.HelpBox(@"Do not disable this setting unless it is not viable to wait for the compile on upload process. 
+                        EditorGUILayout.HelpBox(@"Do not disable this setting unless it is not viable to wait for the compile on upload process.
 Disabling this setting will make the UNITY_EDITOR define not work as expected and will break prefabs that depend on the define being accurate between game and editor builds.", MessageType.Warning);
                     }
 
@@ -271,7 +276,7 @@ Disabling this setting will make the UNITY_EDITOR define not work as expected an
                     EditorGUILayout.Space();
                     SerializedProperty watcherModeProperty = settingsObject.FindProperty(nameof(UdonSharpSettings.watcherMode));
                     EditorGUILayout.PropertyField(watcherModeProperty, outputLogWatcherModeLabel);
-                    
+
                     if (watcherModeProperty.enumValueIndex == (int)UdonSharpSettings.LogWatcherMode.Prefix)
                     {
                         EditorGUILayout.PropertyField(settingsObject.FindProperty(nameof(UdonSharpSettings.logWatcherMatchStrings)), prefixArrayLabel, true);

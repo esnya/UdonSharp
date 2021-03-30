@@ -32,7 +32,7 @@ namespace UdonSharpEditor
             (new GUIContent("Continuous"), new GUIContent("Continuous replication is intended for frequently-updated variables of small size, and will be tweened.")),
             (new GUIContent("Manual"), new GUIContent("Manual replication is intended for infrequently-updated variables of small or large size, and will not be tweened.")),
         });
-        
+
         static Rect GetAreaRect(Rect rect)
         {
             const float borderWidth = 1f;
@@ -73,7 +73,7 @@ namespace UdonSharpEditor
                 EditorGUILayout.LabelField("✔", checkboxStyle, GUILayout.Width(10f));
             else
                 EditorGUILayout.LabelField("", checkboxStyle, GUILayout.Width(10f));
-            
+
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
             EditorGUILayout.Space();
@@ -204,7 +204,7 @@ namespace UdonSharpEditor
                 totalHeight += selectionStyle.margin.vertical;
                 totalHeight += selectionStyle.padding.vertical;
             }
-            
+
             totalHeight += EditorStyles.textArea.margin.vertical;
 
             return new Vector2(controlRect.width, totalHeight);
@@ -281,8 +281,8 @@ namespace UdonSharpEditor
                 undoLabelStyle.stretchWidth = false;
                 undoLabelStyle.stretchHeight = false;
 
-                undoArrowLight = new GUIContent((Texture)EditorGUIUtility.Load("Assets/UdonSharp/Editor/Resources/UndoArrowLight.png"), "Reset to default value");
-                undoArrowDark = new GUIContent((Texture)EditorGUIUtility.Load("Assets/UdonSharp/Editor/Resources/UndoArrowBlack.png"), "Reset to default value");
+                undoArrowLight = new GUIContent(Resources.Load<Texture2D>("UndoArrowLight"), "Reset to default value");
+                undoArrowDark = new GUIContent(Resources.Load<Texture2D>("UndoArrowBlack"), "Reset to default value");
 
                 Texture2D clearColorLightTex = new Texture2D(1, 1);
                 clearColorLightTex.SetPixel(0, 0, new Color32(194, 194, 194, 255));
@@ -324,7 +324,7 @@ namespace UdonSharpEditor
 
             return editorState;
         }
-        
+
         internal static void DrawUtilities(UdonBehaviour udonBehaviour, UdonSharpProgramAsset programAsset)
         {
             USharpEditorState editorState = GetEditorState(programAsset);
@@ -611,7 +611,7 @@ namespace UdonSharpEditor
 
             return objectFieldValue;
         }
-        
+
         private static Dictionary<UdonBehaviour, Dictionary<string, bool>> _foldoutStates = new Dictionary<UdonBehaviour, Dictionary<string, bool>>();
 
         private static bool GetFoldoutState(UdonBehaviour behaviour, string foldoutIdentifier)
@@ -641,7 +641,7 @@ namespace UdonSharpEditor
                 foldoutDict = new Dictionary<string, bool>();
                 _foldoutStates.Add(behaviour, foldoutDict);
             }
-            
+
             if (!foldoutDict.ContainsKey(foldoutIdentifier))
             {
                 foldoutDict.Add(foldoutIdentifier, false);
@@ -1209,7 +1209,7 @@ namespace UdonSharpEditor
                     DrawPublicVariableField(behaviour, programAsset, exportedSymbol, programAsset.GetPublicVariableDefaultValue(exportedSymbol), symbolType, ref dirty, false);
                     continue;
                 }
-                
+
                 if (!publicVariables.TryGetVariableValue(exportedSymbol, out object variableValue))
                 {
                     variableValue = programAsset.GetPublicVariableDefaultValue(exportedSymbol);
@@ -1239,8 +1239,8 @@ namespace UdonSharpEditor
                     bool foundType = behaviour.publicVariables.TryGetVariableType(exportedSymbolName, out var variableType);
 
                     // Remove this variable from the publicVariable list since UdonBehaviours set all null GameObjects, UdonBehaviours, and Transforms to the current behavior's equivalent object regardless of if it's marked as a `null` heap variable or `this`
-                    // This default behavior is not the same as Unity, where the references are just left null. And more importantly, it assumes that the user has interacted with the inspector on that object at some point which cannot be guaranteed. 
-                    // Specifically, if the user adds some public variable to a class, and multiple objects in the scene reference the program asset, 
+                    // This default behavior is not the same as Unity, where the references are just left null. And more importantly, it assumes that the user has interacted with the inspector on that object at some point which cannot be guaranteed.
+                    // Specifically, if the user adds some public variable to a class, and multiple objects in the scene reference the program asset,
                     //   the user will need to go through each of the objects' inspectors to make sure each UdonBehavior has its `publicVariables` variable populated by the inspector
                     if (foundValue && foundType &&
                         variableValue.IsUnityObjectNull() &&
@@ -1275,7 +1275,7 @@ namespace UdonSharpEditor
         }
 
         static FieldInfo serializedAssetField;
-        
+
         internal static bool DrawProgramSource(UdonBehaviour behaviour, bool drawScript = true)
         {
             if (serializedAssetField == null)
@@ -1416,7 +1416,7 @@ namespace UdonSharpEditor
             if (backingBehaviour)
                 DrawSyncSettings(backingBehaviour);
         }
-        
+
         /// <summary>
         /// Draws the interact settings for UdonBehaviours, this is the interact text and proximity settings. These settings will only show if the script has an Interact() event.
         /// </summary>
@@ -1457,7 +1457,7 @@ namespace UdonSharpEditor
 
                     if (needsProxyCall)
                         UdonSharpEditorUtility.CopyProxyToUdon(proxy, ProxySerializationPolicy.All);
-                    
+
                     behaviour.SendCustomEvent("_interact");
 
                     if (needsProxyCall)
@@ -1483,7 +1483,7 @@ namespace UdonSharpEditor
 
         /// <summary>
         /// Draws the button to convert UdonSharpBehaviours to UdonBehaviours
-        /// 
+        ///
         /// Should be used as such in OnInspectorGUI to avoid errors:
         /// if (DrawConvertToUdonBehaviourButton(target)) return;
         /// </summary>
@@ -1515,7 +1515,7 @@ namespace UdonSharpEditor
 
         /// <summary>
         /// Draws the button to convert UdonSharpBehaviours to UdonBehaviours
-        /// 
+        ///
         /// Should be used as such in OnInspectorGUI to avoid errors:
         /// if (DrawConvertToUdonBehaviourButton(targets)) return;
         /// </summary>
