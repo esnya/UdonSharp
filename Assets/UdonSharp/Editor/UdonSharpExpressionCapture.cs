@@ -2418,7 +2418,7 @@ namespace UdonSharp.Compiler
 
         private bool HandleLocalPropertyLookup(string localPropertyName)
         {
-            if (visitorContext.definedMethods == null)
+            if (visitorContext.definedProperties == null)
                 return false;
 
             PropertyDefinition foundProperty = null;
