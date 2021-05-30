@@ -2338,6 +2338,7 @@ namespace UdonSharp.Compiler
                      captureArchetype == ExpressionCaptureArchetype.Property || 
                      captureArchetype == ExpressionCaptureArchetype.Field ||
                      captureArchetype == ExpressionCaptureArchetype.ExternUserField ||
+                     captureArchetype == ExpressionCaptureArchetype.ExternUserProperty ||
                      captureArchetype == ExpressionCaptureArchetype.ArrayIndexer ||
                      captureArchetype == ExpressionCaptureArchetype.Enum)
             {
