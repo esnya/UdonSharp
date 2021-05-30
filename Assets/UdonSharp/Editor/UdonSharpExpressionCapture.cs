@@ -2336,6 +2336,7 @@ namespace UdonSharp.Compiler
             // This is where we need to start building intermediate variables to store the input for the next statement
             else if (captureArchetype == ExpressionCaptureArchetype.LocalSymbol || 
                      captureArchetype == ExpressionCaptureArchetype.Property || 
+                     captureArchetype == ExpressionCaptureArchetype.LocalProperty ||
                      captureArchetype == ExpressionCaptureArchetype.Field ||
                      captureArchetype == ExpressionCaptureArchetype.ExternUserField ||
                      captureArchetype == ExpressionCaptureArchetype.ExternUserProperty ||
@@ -2419,7 +2420,7 @@ namespace UdonSharp.Compiler
         {
             if (visitorContext.definedMethods == null)
                 return false;
-            
+
             PropertyDefinition foundProperty = null;
 
             foreach (PropertyDefinition propertyDefinition in visitorContext.definedProperties)
@@ -2434,12 +2435,13 @@ namespace UdonSharp.Compiler
             if (foundProperty == null)
                 return false;
 
+            accessSymbol = visitorContext.topTable.CreateThisSymbol(visitorContext.behaviourUserType);
             captureArchetype = ExpressionCaptureArchetype.LocalProperty;
             captureLocalProperty = foundProperty;
 
             return true;
         }
-        
+
         private MethodInfo[] GetTypeMethods(System.Type type, BindingFlags bindingFlags)
         {
             MethodInfo[] methods;
