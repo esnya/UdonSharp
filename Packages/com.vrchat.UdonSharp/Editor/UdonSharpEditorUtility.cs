@@ -1,4 +1,4 @@
-﻿
+
 using System;
 using JetBrains.Annotations;
 using System.Collections.Generic;
@@ -383,254 +383,276 @@ namespace UdonSharpEditor
 
             // Walk up from children -> parents and mark prefab deltas on all U# behaviours to be upgraded
             // Prevents versioning from being overwritten when a parent prefab is upgraded
-            foreach (string prefabPath in prefabDag.Reverse())
+            try
             {
-                GameObject prefabRoot = PrefabUtility.LoadPrefabContents(prefabPath);
-
-                bool needsSave = false;
-
-                try
+                AssetDatabase.StartAssetEditing();
+                foreach (string prefabPath in prefabDag.Reverse())
                 {
-                    HashSet<UdonBehaviour> behavioursToPrepare = new HashSet<UdonBehaviour>();
-                    
-                    foreach (UdonBehaviour behaviour in prefabRoot.GetComponentsInChildren<UdonBehaviour>(true))
+                    GameObject prefabRoot = PrefabUtility.LoadPrefabContents(prefabPath);
+
+                    bool needsSave = false;
+
+                    try
                     {
-                        if (PrefabUtility.GetCorrespondingObjectFromSource(behaviour) != behaviour && (NeedsNewProxy(behaviour) || NeedsSerializationUpgrade(behaviour)))
-                        {
-                            behavioursToPrepare.Add(behaviour);
-                        }
-                    }
-                    
-                    // Deltas are stored per-prefab-instance-root in a given prefab, don't question it. Thanks.
-                    // We take care to not accidentally hit any non-U#-behaviour deltas here
-                    // These APIs are not documented properly at all and the only mentions of them on forum posts are how they don't work with no solutions posted :))))
-                    if (behavioursToPrepare.Count > 0)
-                    {
-                        HashSet<GameObject> rootGameObjects = new HashSet<GameObject>();
+                        HashSet<UdonBehaviour> behavioursToPrepare = new HashSet<UdonBehaviour>();
 
-                        foreach (UdonBehaviour behaviourToPrepare in behavioursToPrepare)
+                        foreach (UdonBehaviour behaviour in prefabRoot.GetComponentsInChildren<UdonBehaviour>(true))
                         {
-                            GameObject rootPrefab = PrefabUtility.GetOutermostPrefabInstanceRoot(behaviourToPrepare);
-
-                            rootGameObjects.Add(rootPrefab ? rootPrefab : behaviourToPrepare.gameObject);
-                        }
-                        
-                        HashSet<Object> originalObjects = new HashSet<Object>(behavioursToPrepare.Select(PrefabUtility.GetCorrespondingObjectFromOriginalSource));
-
-                        foreach (UdonBehaviour behaviour in behavioursToPrepare)
-                        {
-                            UdonBehaviour currentBehaviour = behaviour;
-                        
-                            while (currentBehaviour)
+                            if (PrefabUtility.GetCorrespondingObjectFromSource(behaviour) != behaviour && (NeedsNewProxy(behaviour) || NeedsSerializationUpgrade(behaviour)))
                             {
-                                originalObjects.Add(currentBehaviour);
-                                
-                                UdonBehaviour newBehaviour = PrefabUtility.GetCorrespondingObjectFromSource(currentBehaviour);
-                        
-                                currentBehaviour = newBehaviour != currentBehaviour ? newBehaviour : null;
+                                behavioursToPrepare.Add(behaviour);
                             }
                         }
 
-                        foreach (GameObject rootGameObject in rootGameObjects)
+                        // Deltas are stored per-prefab-instance-root in a given prefab, don't question it. Thanks.
+                        // We take care to not accidentally hit any non-U#-behaviour deltas here
+                        // These APIs are not documented properly at all and the only mentions of them on forum posts are how they don't work with no solutions posted :))))
+                        if (behavioursToPrepare.Count > 0)
                         {
-                            List<PropertyModification> propertyModifications = PrefabUtility.GetPropertyModifications(rootGameObject)?.ToList();
+                            HashSet<GameObject> rootGameObjects = new HashSet<GameObject>();
 
-                            if (propertyModifications != null)
+                            foreach (UdonBehaviour behaviourToPrepare in behavioursToPrepare)
                             {
-                                propertyModifications = propertyModifications.Where(
-                                    modification =>
-                                    {
-                                        if (modification.target == null)
-                                        {
-                                            return true;
-                                        }
-                                        
-                                        if (!originalObjects.Contains(modification.target))
-                                        {
-                                            return true;
-                                        }
-                                    
-                                        if (modification.propertyPath == "serializedPublicVariablesBytesString" ||
-                                            modification.propertyPath.StartsWith("publicVariablesUnityEngineObjects", StringComparison.Ordinal))
-                                        {
-                                            // UdonSharpUtils.Log($"Removed property override for {modification.propertyPath} on {modification.target}");
-                                            return false;
-                                        }
+                                GameObject rootPrefab = PrefabUtility.GetOutermostPrefabInstanceRoot(behaviourToPrepare);
 
-                                        return true;
-                                    }).ToList();
-                                
-                                // UdonSharpUtils.Log($"Modifications found on {rootGameObject}");
-                            }
-                            else
-                            {
-                                propertyModifications = new List<PropertyModification>();
+                                rootGameObjects.Add(rootPrefab ? rootPrefab : behaviourToPrepare.gameObject);
                             }
 
-                            foreach (UdonBehaviour behaviour in rootGameObject.GetComponentsInChildren<UdonBehaviour>(true))
+                            HashSet<Object> originalObjects = new HashSet<Object>(behavioursToPrepare.Select(PrefabUtility.GetCorrespondingObjectFromOriginalSource));
+
+                            foreach (UdonBehaviour behaviour in behavioursToPrepare)
                             {
-                                if (!behavioursToPrepare.Contains(behaviour))
+                                UdonBehaviour currentBehaviour = behaviour;
+
+                                while (currentBehaviour)
                                 {
-                                    continue;
+                                    originalObjects.Add(currentBehaviour);
+
+                                    UdonBehaviour newBehaviour = PrefabUtility.GetCorrespondingObjectFromSource(currentBehaviour);
+
+                                    currentBehaviour = newBehaviour != currentBehaviour ? newBehaviour : null;
+                                }
+                            }
+
+                            foreach (GameObject rootGameObject in rootGameObjects)
+                            {
+                                List<PropertyModification> propertyModifications = PrefabUtility.GetPropertyModifications(rootGameObject)?.ToList();
+
+                                if (propertyModifications != null)
+                                {
+                                    propertyModifications = propertyModifications.Where(
+                                        modification =>
+                                        {
+                                            if (modification.target == null)
+                                            {
+                                                return true;
+                                            }
+
+                                            if (!originalObjects.Contains(modification.target))
+                                            {
+                                                return true;
+                                            }
+
+                                            if (modification.propertyPath == "serializedPublicVariablesBytesString" ||
+                                                modification.propertyPath.StartsWith("publicVariablesUnityEngineObjects", StringComparison.Ordinal))
+                                            {
+                                                // UdonSharpUtils.Log($"Removed property override for {modification.propertyPath} on {modification.target}");
+                                                return false;
+                                            }
+
+                                            return true;
+                                        }).ToList();
+
+                                    // UdonSharpUtils.Log($"Modifications found on {rootGameObject}");
+                                }
+                                else
+                                {
+                                    propertyModifications = new List<PropertyModification>();
                                 }
 
-                                UdonBehaviour originalBehaviour = PrefabUtility.GetCorrespondingObjectFromSource(behaviour);
-                                
-                                propertyModifications.Add(new PropertyModification()
+                                foreach (UdonBehaviour behaviour in rootGameObject.GetComponentsInChildren<UdonBehaviour>(true))
                                 {
-                                    target = originalBehaviour, 
-                                    propertyPath = "serializedPublicVariablesBytesString",
-                                    value = (string)_publicVariablesBytesStrField.GetValue(behaviour)
-                                });
+                                    if (!behavioursToPrepare.Contains(behaviour))
+                                    {
+                                        continue;
+                                    }
 
-                                List<Object> objectRefs = (List<Object>)_publicVariablesObjectReferences.GetValue(behaviour);
+                                    UdonBehaviour originalBehaviour = PrefabUtility.GetCorrespondingObjectFromSource(behaviour);
 
-                                propertyModifications.Add(new PropertyModification()
-                                {
-                                    target = originalBehaviour, 
-                                    propertyPath = "publicVariablesUnityEngineObjects.Array.size",
-                                    value = objectRefs.Count.ToString()
-                                });
-
-                                for (int i = 0; i < objectRefs.Count; ++i)
-                                {
                                     propertyModifications.Add(new PropertyModification()
                                     {
                                         target = originalBehaviour,
-                                        propertyPath = $"publicVariablesUnityEngineObjects.Array.data[{i}]",
-                                        objectReference = objectRefs[i], 
-                                        value = ""
+                                        propertyPath = "serializedPublicVariablesBytesString",
+                                        value = (string)_publicVariablesBytesStrField.GetValue(behaviour)
                                     });
+
+                                    List<Object> objectRefs = (List<Object>)_publicVariablesObjectReferences.GetValue(behaviour);
+
+                                    propertyModifications.Add(new PropertyModification()
+                                    {
+                                        target = originalBehaviour,
+                                        propertyPath = "publicVariablesUnityEngineObjects.Array.size",
+                                        value = objectRefs.Count.ToString()
+                                    });
+
+                                    for (int i = 0; i < objectRefs.Count; ++i)
+                                    {
+                                        propertyModifications.Add(new PropertyModification()
+                                        {
+                                            target = originalBehaviour,
+                                            propertyPath = $"publicVariablesUnityEngineObjects.Array.data[{i}]",
+                                            objectReference = objectRefs[i],
+                                            value = ""
+                                        });
+                                    }
                                 }
+
+                                PrefabUtility.SetPropertyModifications(rootGameObject, propertyModifications.ToArray());
+                                EditorUtility.SetDirty(rootGameObject);
+
+                                needsSave = true;
                             }
 
-                            PrefabUtility.SetPropertyModifications(rootGameObject, propertyModifications.ToArray());
-                            EditorUtility.SetDirty(rootGameObject);
+                            // UdonSharpUtils.Log($"Marking delta on prefab {prefabRoot} because it is not the original definition.");
+                        }
+
+                        if (needsSave)
+                        {
+                            PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
+                        }
+                    }
+                    finally
+                    {
+                        PrefabUtility.UnloadPrefabContents(prefabRoot);
+                    }
+                }
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+            }
+            if (phase2FixupPrefabRoots.Count > 0)
+                UdonSharpUtils.Log($"Running upgrade process on {phase2FixupPrefabRoots.Count} prefabs: {string.Join(", ", phase2FixupPrefabRoots.Select(Path.GetFileName))}");
+            try
+            {
+                AssetDatabase.StartAssetEditing();
+                foreach (string prefabRootPath in prefabDag)
+                {
+                    if (!phase1FixupPrefabRoots.Contains(prefabRootPath))
+                    {
+                        continue;
+                    }
+
+                    GameObject prefabRoot = PrefabUtility.LoadPrefabContents(prefabRootPath);
+
+                    try
+                    {
+                        bool needsSave = false;
+
+                        foreach (UdonBehaviour udonBehaviour in prefabRoot.GetComponentsInChildren<UdonBehaviour>(true))
+                        {
+                            if (!NeedsNewProxy(udonBehaviour))
+                            {
+                                if (GetBehaviourVersion(udonBehaviour) == UdonSharpBehaviourVersion.V0)
+                                {
+                                    SetBehaviourVersion(udonBehaviour, UdonSharpBehaviourVersion.V0DataUpgradeNeeded);
+                                    needsSave = true;
+                                }
+
+                                continue;
+                            }
+
+                            UdonSharpBehaviour newProxy = (UdonSharpBehaviour)udonBehaviour.gameObject.AddComponent(GetUdonSharpBehaviourType(udonBehaviour));
+                            newProxy.enabled = udonBehaviour.enabled;
+
+                            SetBackingUdonBehaviour(newProxy, udonBehaviour);
+
+                            MoveComponentRelativeToComponent(newProxy, udonBehaviour, true);
+
+                            SetBehaviourVersion(udonBehaviour, UdonSharpBehaviourVersion.V0DataUpgradeNeeded);
+
+                            UdonSharpUtils.SetDirty(udonBehaviour);
+                            UdonSharpUtils.SetDirty(newProxy);
 
                             needsSave = true;
                         }
-                        
-                        // UdonSharpUtils.Log($"Marking delta on prefab {prefabRoot} because it is not the original definition.");
-                    }
-                    
-                    if (needsSave)
-                    {
-                        PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
-                    }
-                }
-                finally
-                {
-                    PrefabUtility.UnloadPrefabContents(prefabRoot);
-                }
-            }
-            
-            if (phase2FixupPrefabRoots.Count > 0)
-                UdonSharpUtils.Log($"Running upgrade process on {phase2FixupPrefabRoots.Count} prefabs: {string.Join(", ", phase2FixupPrefabRoots.Select(Path.GetFileName))}");
-            
-            foreach (string prefabRootPath in prefabDag)
-            {
-                if (!phase1FixupPrefabRoots.Contains(prefabRootPath))
-                {
-                    continue;
-                }
 
-                GameObject prefabRoot = PrefabUtility.LoadPrefabContents(prefabRootPath);
-
-                try
-                {
-                    bool needsSave = false;
-                    
-                    foreach (UdonBehaviour udonBehaviour in prefabRoot.GetComponentsInChildren<UdonBehaviour>(true))
-                    {
-                        if (!NeedsNewProxy(udonBehaviour))
+                        if (needsSave)
                         {
-                            if (GetBehaviourVersion(udonBehaviour) == UdonSharpBehaviourVersion.V0)
-                            {
-                                SetBehaviourVersion(udonBehaviour, UdonSharpBehaviourVersion.V0DataUpgradeNeeded);
-                                needsSave = true;
-                            }
-                            
-                            continue;
+                            PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabRootPath);
                         }
 
-                        UdonSharpBehaviour newProxy = (UdonSharpBehaviour)udonBehaviour.gameObject.AddComponent(GetUdonSharpBehaviourType(udonBehaviour));
-                        newProxy.enabled = udonBehaviour.enabled;
-
-                        SetBackingUdonBehaviour(newProxy, udonBehaviour);
-
-                        MoveComponentRelativeToComponent(newProxy, udonBehaviour, true);
-
-                        SetBehaviourVersion(udonBehaviour, UdonSharpBehaviourVersion.V0DataUpgradeNeeded);
-
-                        UdonSharpUtils.SetDirty(udonBehaviour);
-                        UdonSharpUtils.SetDirty(newProxy);
-
-                        needsSave = true;
+                        // UdonSharpUtils.Log($"Ran prefab upgrade phase 1 on {prefabRoot}");
                     }
-
-                    if (needsSave)
+                    catch (Exception e)
                     {
-                        PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabRootPath);
+                        UdonSharpUtils.LogError($"Encountered exception while upgrading prefab {prefabRootPath}, report exception to Merlin: {e}");
                     }
-
-                    // UdonSharpUtils.Log($"Ran prefab upgrade phase 1 on {prefabRoot}");
-                }
-                catch (Exception e)
-                {
-                    UdonSharpUtils.LogError($"Encountered exception while upgrading prefab {prefabRootPath}, report exception to Merlin: {e}");
-                }
-                finally
-                {
-                    PrefabUtility.UnloadPrefabContents(prefabRoot);
+                    finally
+                    {
+                        PrefabUtility.UnloadPrefabContents(prefabRoot);
+                    }
                 }
             }
-
-            foreach (string prefabRootPath in prefabDag)
+            finally
             {
-                if (!phase2FixupPrefabRoots.Contains(prefabRootPath))
-                {
-                    continue;
-                }
+                AssetDatabase.StopAssetEditing();
+            }
 
-                GameObject prefabRoot = PrefabUtility.LoadPrefabContents(prefabRootPath);
-
-                try
+            try
+            {
+                AssetDatabase.StartAssetEditing();
+                foreach (string prefabRootPath in prefabDag)
                 {
-                    foreach (UdonBehaviour udonBehaviour in prefabRoot.GetComponentsInChildren<UdonBehaviour>(true))
+                    if (!phase2FixupPrefabRoots.Contains(prefabRootPath))
                     {
-                        if (!NeedsSerializationUpgrade(udonBehaviour))
-                            continue;
-
-                        CopyUdonToProxy(GetProxyBehaviour(udonBehaviour), ProxySerializationPolicy.RootOnly);
-
-                        // We can't remove this data for backwards compatibility :'(
-                        // If we nuke the data, the unity object array on the underlying storage may change.
-                        // Which means that if people have copies of this prefab in the scene with no object reference changes, their data will also get nuked which we do not want.
-                        // Public variable data on the prefabs will never be touched again by U# after upgrading
-                        // We will probably provide an optional upgrade process that strips this extra data, and takes into account all scenes in the project
-
-                        // foreach (string publicVarSymbol in udonBehaviour.publicVariables.VariableSymbols.ToArray())
-                        //     udonBehaviour.publicVariables.RemoveVariable(publicVarSymbol);
-
-                        SetBehaviourVersion(udonBehaviour, UdonSharpBehaviourVersion.V1);
-                        SetBehaviourUpgraded(udonBehaviour);
-
-                        UdonSharpUtils.SetDirty(udonBehaviour);
-                        UdonSharpUtils.SetDirty(GetProxyBehaviour(udonBehaviour));
+                        continue;
                     }
 
-                    PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabRootPath);
+                    GameObject prefabRoot = PrefabUtility.LoadPrefabContents(prefabRootPath);
 
-                    // UdonSharpUtils.Log($"Ran prefab upgrade phase 2 on {prefabRoot}");
+                    try
+                    {
+                        foreach (UdonBehaviour udonBehaviour in prefabRoot.GetComponentsInChildren<UdonBehaviour>(true))
+                        {
+                            if (!NeedsSerializationUpgrade(udonBehaviour))
+                                continue;
+
+                            CopyUdonToProxy(GetProxyBehaviour(udonBehaviour), ProxySerializationPolicy.RootOnly);
+
+                            // We can't remove this data for backwards compatibility :'(
+                            // If we nuke the data, the unity object array on the underlying storage may change.
+                            // Which means that if people have copies of this prefab in the scene with no object reference changes, their data will also get nuked which we do not want.
+                            // Public variable data on the prefabs will never be touched again by U# after upgrading
+                            // We will probably provide an optional upgrade process that strips this extra data, and takes into account all scenes in the project
+
+                            // foreach (string publicVarSymbol in udonBehaviour.publicVariables.VariableSymbols.ToArray())
+                            //     udonBehaviour.publicVariables.RemoveVariable(publicVarSymbol);
+
+                            SetBehaviourVersion(udonBehaviour, UdonSharpBehaviourVersion.V1);
+                            SetBehaviourUpgraded(udonBehaviour);
+
+                            UdonSharpUtils.SetDirty(udonBehaviour);
+                            UdonSharpUtils.SetDirty(GetProxyBehaviour(udonBehaviour));
+                        }
+
+                        PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabRootPath);
+
+                        // UdonSharpUtils.Log($"Ran prefab upgrade phase 2 on {prefabRoot}");
+                    }
+                    catch (Exception e)
+                    {
+                        UdonSharpUtils.LogError($"Encountered exception while upgrading prefab {prefabRootPath}, report exception to Merlin: {e}");
+                    }
+                    finally
+                    {
+                        PrefabUtility.UnloadPrefabContents(prefabRoot);
+                    }
                 }
-                catch (Exception e)
-                {
-                    UdonSharpUtils.LogError($"Encountered exception while upgrading prefab {prefabRootPath}, report exception to Merlin: {e}");
-                }
-                finally
-                {
-                    PrefabUtility.UnloadPrefabContents(prefabRoot);
-                }
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
             }
             
             UdonSharpUtils.Log("Prefab upgrade pass finished");
