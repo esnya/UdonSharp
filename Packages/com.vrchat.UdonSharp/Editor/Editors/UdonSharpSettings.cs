@@ -1,4 +1,4 @@
-﻿
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -76,6 +76,9 @@ public class <TemplateClassName> : UdonSharpBehaviour
         // Log watcher
         public LogWatcherMode watcherMode = LogWatcherMode.Disabled;
         public string[] logWatcherMatchStrings = Array.Empty<string>();
+
+        // Upgrading
+        public bool autoUpgradePrefabs = true;
 
         private static UdonSharpSettings _settings;
         
@@ -316,6 +319,8 @@ Disabling this setting will make the UNITY_EDITOR define not work as expected an
                     EditorGUILayout.LabelField("Experimental", EditorStyles.boldLabel);
 
                     EditorGUILayout.PropertyField(settingsObject.FindProperty(nameof(UdonSharpSettings.shouldForceCompile)), _forceCompileLabel);
+
+                    EditorGUILayout.PropertyField(settingsObject.FindProperty(nameof(UdonSharpSettings.autoUpgradePrefabs)));
 
                     if (EditorGUI.EndChangeCheck())
                     {

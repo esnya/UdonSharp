@@ -1,4 +1,4 @@
-﻿
+
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
@@ -813,13 +813,16 @@ namespace UdonSharpEditor
                     }
                 }
 
-                try
+                if (UdonSharpSettings.GetSettings().autoUpgradePrefabs)
                 {
-                    UdonSharpEditorUtility.UpgradePrefabs(GetAllPrefabsWithUdonSharpBehaviours());
-                }
-                finally
-                {
-                    UdonSharpEditorCache.Instance.ClearUpgradePassQueue();
+                    try
+                    {
+                        UdonSharpEditorUtility.UpgradePrefabs(GetAllPrefabsWithUdonSharpBehaviours());
+                    }
+                    finally
+                    {
+                        UdonSharpEditorCache.Instance.ClearUpgradePassQueue();
+                    }
                 }
             }
         }
@@ -1950,6 +1953,8 @@ namespace UdonSharpEditor
     {
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
         {
+            if (!UdonSharpSettings.GetSettings().autoUpgradePrefabs) return;
+
             List<UdonBehaviour> behaviours = new List<UdonBehaviour>();
             
             foreach (string importedAsset in importedAssets)    
